@@ -78,7 +78,7 @@ module.exports = exports = function(module, funcs){
           }
         });
       }
-      
+
 
       if(!page_file.seo) page_file.seo = {};
       var client_page = {

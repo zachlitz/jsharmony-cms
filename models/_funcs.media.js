@@ -24,6 +24,8 @@ var _ = require('lodash');
 var path = require('path');
 var async = require('async');
 var querystring = require('querystring');
+var urlparser = require('url');
+var fs = require('fs')
 
 module.exports = exports = function(module, funcs){
   var exports = {};
@@ -39,9 +41,43 @@ module.exports = exports = function(module, funcs){
     return path.join(path.join(module.jsh.Config.datadir,'media'),fname);
   }
 
+
+  exports.foobar = function (req, res, next) {
+    var jsh = module.jsh;
+    var appsrv = jsh.AppSrv;
+    var verb = req.method.toLowerCase();
+    var Q = req.query;
+
+    var referer = req.get('Referer');
+    if(referer){
+      var urlparts = urlparser.parse(referer, true);
+      var remote_domain = urlparts.protocol + '//' + (urlparts.auth?urlparts.auth+'@':'') + urlparts.hostname + (urlparts.port?':'+urlparts.port:'');
+      res.setHeader('Access-Control-Allow-Origin', remote_domain);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+      res.setHeader('Access-Control-Allow-Headers', 'Origin,X-Requested-With, Content-Type, Accept');
+      res.setHeader('Access-Control-Allow-Credentials', true);
+    }
+
+    if (verb !== 'get') {
+      return next();
+    }
+
+
+    if (!appsrv.ParamCheck('Q', Q, ['&url'])) { Helper.GenError(req, res, -4, 'Invalid Parameters'); return; }
+
+    // res.end(JSON.stringify({
+    //   '_success': 1,
+    //   'components': Q.url1
+    // }));
+
+    var buff = fs.readFileSync('C:/Users/dev/Downloads/Test.png');
+    res.write(buff, 'binary');
+    res.end(null, 'binary')
+  }
+
   exports.media = function (req, res, next) {
     var verb = req.method.toLowerCase();
-    
+
     var Q = req.query;
     var P = req.body;
     var appsrv = this;
@@ -54,7 +90,7 @@ module.exports = exports = function(module, funcs){
     var dbtypes = appsrv.DB.types;
     var validate = null;
     var model = jsh.getModel(req, module.namespace + 'Media_Tree');
-    
+
     if (verb == 'get'){
       if (!Helper.hasModelAction(req, model, 'B')) { Helper.GenError(req, res, -11, 'Invalid Model Access'); return; }
 
@@ -81,12 +117,12 @@ module.exports = exports = function(module, funcs){
         validate.AddValidator('_obj.media_id', 'Media ID', 'B', [XValidate._v_IsNumeric()]);
         sql = 'select media_key,media_file_id,media_filename,media_path,media_ext from '+(module.schema?module.schema+'.':'')+'media where media_key=@media_key and media_id=@media_id';
       }
-      
+
       var fields = [];
       var datalockstr = '';
       appsrv.getDataLockSQL(req, model, fields, sql_ptypes, sql_params, verrors, function (datalockquery) { datalockstr += ' and ' + datalockquery; });
       sql = Helper.ReplaceAll(sql, '%%%DATALOCKS%%%', datalockstr);
-      
+
       verrors = _.merge(verrors, validate.Validate('B', sql_params));
       if (!_.isEmpty(verrors)) { Helper.GenError(req, res, -2, verrors[''].join('\n')); return; }
 
@@ -104,7 +140,7 @@ module.exports = exports = function(module, funcs){
             return Helper.Redirect302(res, url);
           }
         }
-      
+
         //Validate parameters
         if (!appsrv.ParamCheck('P', P, [])) { Helper.GenError(req, res, -4, 'Invalid Parameters'); return; }
         if (!appsrv.ParamCheck('Q', Q, ['|width','|height','|download','|media_file_id','|media_id'])) { Helper.GenError(req, res, -4, 'Invalid Parameters'); return; }
@@ -116,7 +152,7 @@ module.exports = exports = function(module, funcs){
           verrors = {};
           validate.AddValidator('_obj.width', 'Width', 'B', [ XValidate._v_IsNumeric(), XValidate._v_Required() ]);
           validate.AddValidator('_obj.height', 'Height', 'B', [ XValidate._v_IsNumeric(), XValidate._v_Required() ]);
-          
+
           verrors = _.merge(verrors, validate.Validate('B', Q));
           if (!_.isEmpty(verrors)) { Helper.GenError(req, res, -2, verrors[''].join('\n')); return; }
 
@@ -186,18 +222,18 @@ module.exports = exports = function(module, funcs){
           if(_.isArray(field) && field.length) field = field[0];
           P[field_name] = field;
         }
-        
+
         if (files == null) { return Helper.GenError(req, res, -30, 'Invalid file upload request.'); }
         if (!('media_file' in files)) { return Helper.GenError(req, res, -30, 'Invalid file upload request.'); }
         if (files.media_file.length != 1) { return Helper.GenError(req, res, -30, 'Invalid file upload request.'); }
-        
+
         var media_file = files.media_file[0];
         var media_size = media_file.size;
         var media_file_orig_name = path.basename(media_file.originalFilename);
         var tmp_file_path = media_file.path;
         var media_ext = path.extname(path.basename(media_file_orig_name)).toLowerCase()||'.'; //Get extension
         if (!_.includes(jsh.Config.valid_extensions, media_ext)) { return Helper.GenError(req, res, -32, 'File extension is not supported.'); }
-        
+
         //Validate parameters
         if (!appsrv.ParamCheck('P', P, ['|media_desc', '&media_path', '|media_tags', '|media_type'])) { Helper.GenError(req, res, -4, 'Invalid Parameters'); return; }
         if (!appsrv.ParamCheck('Q', Q, [])) { Helper.GenError(req, res, -4, 'Invalid Parameters'); return; }
@@ -235,18 +271,18 @@ module.exports = exports = function(module, funcs){
               return cb();
             });
           },
-          
+
           //Rename duplicate path
           function(cb){
 
             var media_path_base = base_path + media_filename.substr(0, media_filename.length - media_ext.length) + '%' + media_ext;
-            
+
             sql_ptypes = [dbtypes.VarChar(2048)];
             sql_params = {
               'media_path_base': media_path_base
             };
             sql = 'select media_path from '+(module.schema?module.schema+'.':'')+'v_my_media where media_path like @media_path_base;';
-            
+
             appsrv.ExecRecordset(req._DBContext, sql, sql_ptypes, sql_params, function (err, rslt) {
               if (err != null) { err.sql = sql; err.model = model; appsrv.AppDBError(req, res, err); return; }
               if(!rslt || !rslt.length || !rslt[0] || !rslt[0].length) return cb();
@@ -312,7 +348,7 @@ module.exports = exports = function(module, funcs){
             };
 
             sql = (module.schema?module.schema+'.':'')+'insert_media(@media_desc, @media_path, @media_tags, @media_type, @media_ext, @media_size, @media_width, @media_height);';
-            
+
             var fields = [];
             var datalockstr = '';
             appsrv.getDataLockSQL(req, model, fields, sql_ptypes, sql_params, verrors, function (datalockquery) { datalockstr += ' and ' + datalockquery; });
@@ -345,7 +381,7 @@ module.exports = exports = function(module, funcs){
 
       if(!req.params || !req.params.media_key) return next();
       var media_key = req.params.media_key;
-      
+
       //Check if media exists
       sql_ptypes = [dbtypes.BigInt];
       sql_params = { 'media_key': media_key };
@@ -353,12 +389,12 @@ module.exports = exports = function(module, funcs){
       verrors = {};
       validate.AddValidator('_obj.media_key', 'Media Key', 'B', [XValidate._v_IsNumeric(), XValidate._v_Required()]);
       sql = 'select media_key,media_file_id,media_filename,media_path,media_ext from '+(module.schema?module.schema+'.':'')+'v_my_media where media_key=@media_key';
-      
+
       var fields = [];
       var datalockstr = '';
       appsrv.getDataLockSQL(req, model, fields, sql_ptypes, sql_params, verrors, function (datalockquery) { datalockstr += ' and ' + datalockquery; });
       sql = Helper.ReplaceAll(sql, '%%%DATALOCKS%%%', datalockstr);
-      
+
       verrors = _.merge(verrors, validate.Validate('B', sql_params));
       if (!_.isEmpty(verrors)) { Helper.GenError(req, res, -2, verrors[''].join('\n')); return; }
 
@@ -383,11 +419,11 @@ module.exports = exports = function(module, funcs){
             if(_.isArray(field) && field.length) field = field[0];
             P[field_name] = field;
           }
-          
+
           if (files == null) { return Helper.GenError(req, res, -30, 'Invalid file upload request.'); }
           if (!('media_file' in files)) { return Helper.GenError(req, res, -30, 'Invalid file upload request.'); }
           if (files.media_file.length != 1) { return Helper.GenError(req, res, -30, 'Invalid file upload request.'); }
-          
+
           var media_file = files.media_file[0];
           var media_size = media_file.size;
           var media_file_orig_name = path.basename(media_file.originalFilename);
@@ -397,7 +433,7 @@ module.exports = exports = function(module, funcs){
 
           //Get new media_path base on media_ext
           var media_path = media.media_path.substr(0, media.media_path.length - media.media_ext.length) + media_ext;
-          
+
           //Validate parameters
           if (!appsrv.ParamCheck('P', P, [])) { Helper.GenError(req, res, -4, 'Invalid Parameters'); return; }
           if (!appsrv.ParamCheck('Q', Q, [])) { Helper.GenError(req, res, -4, 'Invalid Parameters'); return; }
@@ -417,7 +453,7 @@ module.exports = exports = function(module, funcs){
                 return cb();
               });
             },
-            
+
             //Get image width / height
             function(cb){
               HelperImg.size(tmp_file_path, function(err, size){
@@ -427,7 +463,7 @@ module.exports = exports = function(module, funcs){
                 return cb();
               });
             },
-            
+
             //Apply maximum image size, if applicable
             function(cb){
               var cmsConfig = jsh.Modules['jsHarmonyCMS'].Config;
@@ -462,7 +498,7 @@ module.exports = exports = function(module, funcs){
 
               sql = 'update '+(module.schema?module.schema+'.':'')+'v_my_media set media_file_id=null,media_ext=@media_ext, media_path=@media_path, media_size=@media_size, media_width=@media_width, media_height=@media_height where media_key = @media_key; ';
               sql += 'select media_filename, media_file_id, media_uptstmp, jsharmony.my_db_user_fmt(media_upuser) media_upuser_fmt, media_mtstmp, jsharmony.my_db_user_fmt(media_muser) media_muser_fmt from '+(module.schema?module.schema+'.':'')+'v_my_media where media_key=@media_key;';
-              
+
               var fields = [];
               var datalockstr = '';
               appsrv.getDataLockSQL(req, model, fields, sql_ptypes, sql_params, verrors, function (datalockquery) { datalockstr += ' and ' + datalockquery; });
@@ -510,7 +546,7 @@ module.exports = exports = function(module, funcs){
 
       if(!req.params || !req.params.media_key) return next();
       var media_key = req.params.media_key;
-      
+
       //Check if media exists
       sql_ptypes = [dbtypes.BigInt];
       sql_params = { 'media_key': media_key };
@@ -518,12 +554,12 @@ module.exports = exports = function(module, funcs){
       verrors = {};
       validate.AddValidator('_obj.media_key', 'Media Key', 'B', [XValidate._v_IsNumeric(), XValidate._v_Required()]);
       sql = 'select media_key,media_file_id,media_filename,media_path,media_ext from '+(module.schema?module.schema+'.':'')+'v_my_media where media_key=@media_key';
-      
+
       var fields = [];
       var datalockstr = '';
       appsrv.getDataLockSQL(req, model, fields, sql_ptypes, sql_params, verrors, function (datalockquery) { datalockstr += ' and ' + datalockquery; });
       sql = Helper.ReplaceAll(sql, '%%%DATALOCKS%%%', datalockstr);
-      
+
       verrors = _.merge(verrors, validate.Validate('B', sql_params));
       if (!_.isEmpty(verrors)) { Helper.GenError(req, res, -2, verrors[''].join('\n')); return; }
 
@@ -531,7 +567,7 @@ module.exports = exports = function(module, funcs){
         if (err != null) { err.sql = sql; err.model = model; appsrv.AppDBError(req, res, err); return; }
         if(!rslt || !rslt.length || !rslt[0] || (rslt[0].length != 1)){ return Helper.GenError(req, res, -4, 'Invalid Media ID'); }
         var media = rslt[0][0];
-      
+
         //Validate parameters
         if (!appsrv.ParamCheck('P', P, [])) { Helper.GenError(req, res, -4, 'Invalid Parameters'); return; }
         if (!appsrv.ParamCheck('Q', Q, [])) { Helper.GenError(req, res, -4, 'Invalid Parameters'); return; }

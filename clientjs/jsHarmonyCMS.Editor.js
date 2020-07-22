@@ -69,7 +69,7 @@ exports = module.exports = function(jsh, cms, toolbarContainer){
         valid_children: '+h1[p],+h2[p],+h3[p],+h4[p],+h5[p],+h6[p]',
         entity_encoding: 'numeric',
         plugins: [
-          'advlist autolink autoresize lists link image charmapmaterialicons anchor',
+          'advlist autolink autoresize lists link image imagetools charmapmaterialicons anchor',
           'searchreplace visualblocks code fullscreen wordcount jsHarmonyCmsWebSnippet jsHarmonyCms',
           'insertdatetime media table paste code noneditable'
         ],
@@ -105,6 +105,32 @@ exports = module.exports = function(jsh, cms, toolbarContainer){
         },
         fixed_toolbar_container: _this.toolbarContainer ? '#' + _this.toolbarContainer.attr('id') : '',
         charmap_append: _this.getMaterialIcons(),
+        // The imagetools_proxy SHOULD not be needed
+        // because we are using imagetools_fetch_image instead.
+        // However, TinyMce will not execute imagetools_fetch_image unless
+        // imagetools_proxy has a string value (any string works).
+        // imagetools_proxy: jsh._BASEURL + '_funcs/foobarbaz',
+        imagetools_proxy: 'noproxy', //jsh._BASEURL + '_funcs/foobarbaz',
+        imagetools_fetch_image: function (img) {
+          return new tinymce.util.Promise(function (resolve) {
+
+            var url = jsh._BASEURL + '_funcs/foobarbaz?url=abbcd'
+            var request = new XMLHttpRequest();
+            request.open('GET', url, true);
+            request.responseType = 'blob';
+            request.withCredentials  = true;
+            request.onload = function(requestEvent) {
+              debugger;
+              resolve(request.response);
+            };
+
+            console.log('call')
+
+            request.send();
+            // ...
+            // resolve(new Blob(...));
+          });
+        }
       }, jsh.globalparams.defaultEditorConfig, _this.defaultConfig);
 
       _this.editorConfig.full = _.extend({}, _this.editorConfig.base, {

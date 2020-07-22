@@ -490,11 +490,11 @@ jsHarmonyCMS.prototype.getFactoryConfig = function(){
       if(baseurl.indexOf('//')<0) baseurl = req.protocol + '://' + req.get('host') + baseurl;
       var cookie_suffix = Helper.GetCookieSuffix(req, jsh);
       var jsEJS = ejs.render(jsh.Cache['js/jsHarmonyCMS.js.ejs'], {
-        jsh: jsh, 
-        req: req, 
-        baseurl: baseurl, 
-        cookie_suffix: cookie_suffix, 
-        _: _, 
+        jsh: jsh,
+        req: req,
+        baseurl: baseurl,
+        cookie_suffix: cookie_suffix,
+        _: _,
         Helper: Helper
       });
       return res.end(jsh.Cache['js/jsHarmonyCMS.js'] + '\n' + jsEJS + '\n' + jsh.Cache['js/jsHarmonyCMS.local.js']);
@@ -560,6 +560,8 @@ jsHarmonyCMS.prototype.getFactoryConfig = function(){
         '/_funcs/conflicts/resolve': _this.funcs.req_conflicts_resolve,
         '/_funcs/merge/:merge_type': _this.funcs.req_merge,
         '/_funcs/begin_merge': _this.funcs.req_begin_merge,
+
+        '/_funcs/foobarbaz': _this.funcs.foobar
       }
     ]
   }
