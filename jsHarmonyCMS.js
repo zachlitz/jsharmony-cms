@@ -92,6 +92,9 @@ jsHarmonyCMS.prototype.Init = function(cb){
   HelperFS.createFolderIfNotExistsSync(path.join(jsh.Config.datadir,'menu'));
   HelperFS.createFolderIfNotExistsSync(path.join(jsh.Config.datadir,'sitemap'));
   HelperFS.createFolderIfNotExistsSync(path.join(jsh.Config.datadir,'publish_log'));
+  HelperFS.createFolderIfNotExistsSync(path.join(jsh.Config.datadir,'spellcheck'));
+  HelperFS.createFolderIfNotExistsSync(path.join(jsh.Config.datadir,'spellcheck', 'default'));
+  HelperFS.createFolderIfNotExistsSync(path.join(jsh.Config.datadir,'spellcheck', 'custom'));
 
   if(!_.isEmpty(_this.Config.media_thumbnails)){
     jsh.TestImageMagick('jsHarmonyCMS > Media Thumbnails');
@@ -490,11 +493,11 @@ jsHarmonyCMS.prototype.getFactoryConfig = function(){
       if(baseurl.indexOf('//')<0) baseurl = req.protocol + '://' + req.get('host') + baseurl;
       var cookie_suffix = Helper.GetCookieSuffix(req, jsh);
       var jsEJS = ejs.render(jsh.Cache['js/jsHarmonyCMS.js.ejs'], {
-        jsh: jsh, 
-        req: req, 
-        baseurl: baseurl, 
-        cookie_suffix: cookie_suffix, 
-        _: _, 
+        jsh: jsh,
+        req: req,
+        baseurl: baseurl,
+        cookie_suffix: cookie_suffix,
+        _: _,
         Helper: Helper
       });
       return res.end(jsh.Cache['js/jsHarmonyCMS.js'] + '\n' + jsEJS + '\n' + jsh.Cache['js/jsHarmonyCMS.local.js']);
@@ -560,6 +563,8 @@ jsHarmonyCMS.prototype.getFactoryConfig = function(){
         '/_funcs/conflicts/resolve': _this.funcs.req_conflicts_resolve,
         '/_funcs/merge/:merge_type': _this.funcs.req_merge,
         '/_funcs/begin_merge': _this.funcs.req_begin_merge,
+        '/_funcs/spellcheck': _this.funcs.spellcheck_check,
+        '/_funcs/spellcheck/add': _this.funcs.spellcheck_add
       }
     ]
   }

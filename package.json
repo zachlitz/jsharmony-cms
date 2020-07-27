@@ -33,6 +33,7 @@
     "js-beautify": "^1.10.2",
     "jsharmony": "^1.1.201",
     "jsharmony-factory": "^1.1.97",
-    "lodash": "^4.17.14"
+    "lodash": "^4.17.14",
+    "typo-js": "^1.1.0"
   }
 }

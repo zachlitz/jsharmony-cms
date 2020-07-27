@@ -43,8 +43,12 @@ exports = module.exports = function(jsh, cms, toolbarContainer){
     text: null
   };
 
+
   this.init = function(cb){
     if(!cb) cb = function(){};
+
+    var spellcheckLanguages = (jsh.globalparams.defaultEditorConfig || {}).spellcheck_languages || [];
+    spellcheckLanguages =  _.map(spellcheckLanguages, function(a) { return a.name + '=' + a.dict});
 
     //Initialize Editor
     _this.initToolbarContainer(toolbarContainer);
@@ -71,9 +75,9 @@ exports = module.exports = function(jsh, cms, toolbarContainer){
         plugins: [
           'advlist autolink autoresize lists link image charmapmaterialicons anchor',
           'searchreplace visualblocks code fullscreen wordcount jsHarmonyCmsWebSnippet jsHarmonyCms',
-          'insertdatetime media table paste code noneditable'
+          'insertdatetime media table paste code noneditable spellchecker'
         ],
-        toolbar: 'formatselect | forecolor backcolor | bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link  image charmapmaterialicons table fullscreen | jsHarmonyCmsWebSnippet | jsHarmonyCmsComponent | jsHarmonyCmsView',
+        toolbar: 'formatselect | forecolor backcolor | bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link  image charmapmaterialicons table fullscreen | spellchecker | jsHarmonyCmsWebSnippet | jsHarmonyCmsComponent | jsHarmonyCmsView',
         removed_menuitems: 'newdocument',
         image_advtab: true,
         menu: {
@@ -105,6 +109,45 @@ exports = module.exports = function(jsh, cms, toolbarContainer){
         },
         fixed_toolbar_container: _this.toolbarContainer ? '#' + _this.toolbarContainer.attr('id') : '',
         charmap_append: _this.getMaterialIcons(),
+        spellchecker_language: (spellcheckLanguages[0] || '').split('=')[1],
+        spellchecker_languages: (spellcheckLanguages || []).join(','),
+        spellchecker_callback: function(method, text, success, failure) {
+          var language = this.getLanguage();
+          language = language.indexOf('=') > -1 ? language.split('=')[1] : language;
+          if (method === 'spellcheck') {
+            var url = jsh._BASEURL + '_funcs/spellcheck';
+            var data = {
+              words: text.match(this.getWordCharPattern()),
+              lang: language
+            };
+            XExt.CallAppFunc(url, 'post', data, function (rslt) {
+              if ('_success' in rslt) {
+                success({ words: rslt.result, dictionary: [ ] })
+              } else {
+                failure();
+              }
+            }, function(err) {
+              failure('Unknown error');
+            });
+          } else if (method === 'addToDictionary') {
+            var url = jsh._BASEURL + '_funcs/spellcheck/add';
+            var data = {
+              word: text,
+              lang: language
+            };
+            XExt.CallAppFunc(url, 'post', data, function (rslt) {
+              if ('_success' in rslt) {
+                success({ words: rslt.result, dictionary: [ ] })
+              } else {
+                failure();
+              }
+            }, function(err) {
+              failure('Unknown error');
+            });
+          } else {
+            failure('Unsupported spellcheck method');
+          }
+        }
       }, jsh.globalparams.defaultEditorConfig, _this.defaultConfig);
 
       _this.editorConfig.full = _.extend({}, _this.editorConfig.base, {

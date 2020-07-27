@@ -75,9 +75,11 @@ function jsHarmonyCMSConfig(){
     no_publish_complete: false,         //Leave publish in 'RUNNING' (for debugging, so that it will auto-restart with auto_restart_failed_publish flag)
   };
 
-  this.defaultEditorConfig = {};        //Default GUI editor config
-                                        //Set web snippets path: { webSnippets: '/templates/websnippets/index.html' }
-                                        //Enable Material Icons { materialIcons: true }
+  this.defaultEditorConfig = {                                        //Default GUI editor config
+    spellcheck_languages: [{ name: "English (US)", dict: "en_US" }]   //Add/modify languages for spellcheck
+                                                                      //Set web snippets path: { webSnippets: '/templates/websnippets/index.html' }
+                                                                      //Enable Material Icons { materialIcons: true }
+  };
 
   this.onRender = null; //function(target, content, callback){ return callback(new_content); }  //target = 'editor', 'publish'
   this.onRouteLinkBrowser = null; //function(jsh, req, res, model, callback){ return callback(); } //callback(false) to stop further processing
